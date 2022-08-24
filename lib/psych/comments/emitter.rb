@@ -1,6 +1,5 @@
 module Psych
   module Comments
-
     module NodeUtils
       module_function def stringify_node(node)
         case node
@@ -69,6 +68,7 @@ module Psych
         @out = ""
         @state = :init
         @indent = 0
+        @comment_lookahead = []
       end
 
       def print(text)
@@ -92,8 +92,10 @@ module Psych
         @state = :line_start
       end
 
-      def emit(node, skip_leading_comments: false)
-        if node.leading_comments && !skip_leading_comments
+      def emit(node)
+        if node.equal?(@comment_lookahead[0])
+          @comment_lookahead.shift
+        else
           node.leading_comments.each do |comment|
             print comment
             newline!
@@ -138,6 +140,7 @@ module Psych
           end
           newline!
           node.children.each do |subnode|
+            emit_lookahead_comments(subnode) unless flow?(node)
             print "- "
             @state = :pseudo_indent
             @indent += 1
@@ -159,6 +162,27 @@ module Psych
           end
         else
           raise TypeError, node
+        end
+      end
+
+      def emit_lookahead_comments(node)
+        node.leading_comments.each do |comment|
+          print comment
+          newline!
+        end
+        @comment_lookahead.push(node)
+        case node
+        when Psych::Nodes::Mapping, Psych::Nodes::Sequence
+          emit_lookahead_comments(node.children[0]) unless flow?(node)
+        end
+      end
+
+      def flow?(node)
+        case node
+        when Psych::Nodes::Mapping
+          node.style == Psych::Nodes::Mapping::FLOW || node.children.empty?
+        when Psych::Nodes::Sequence
+          node.style == Psych::Nodes::Sequence::FLOW || node.children.empty?
         end
       end
     end
