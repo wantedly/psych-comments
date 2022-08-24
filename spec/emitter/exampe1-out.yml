@@ -1,0 +1,6 @@
+# test
+foo:
+  # test2
+  bar: baz
+  # test3
+  bar2: "baz baz2"
