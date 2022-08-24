@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
-require_relative "comments/version"
+require "psych"
+require "psych/comments/version"
+require "psych/comments/node_ext"
+require "psych/comments/parsing"
 
 module Psych
   module Comments
