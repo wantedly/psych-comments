@@ -68,6 +68,7 @@ module Psych
         @out = ""
         @state = :init
         @indent = 0
+        @flow = false
         @comment_lookahead = []
       end
 
@@ -113,40 +114,75 @@ module Psych
             print stringify_adjust_scalar(node, @indent)
           end
         when Psych::Nodes::Mapping
-          if node.children.empty?
-            print "{}"
-            return
-          end
-          newline!
-          node.children.each_slice(2) do |(key, value)|
-            emit(key)
-            print ":"
-            space!
-            if single_line(value)
-              emit(value)
-            elsif has_bullet(value)
-              emit(value)
+          set_flow(flow?(node)) do
+            if @flow
+              print "{"
+              cont = false
+              node.children.each_slice(2) do |(key, value)|
+                if cont
+                  print ","
+                  space!
+                end
+                emit(key)
+                print ":"
+                space!
+                emit(value)
+                cont = true
+              end
+              print "}"
             else
-              @indent += 1
-              emit(value)
-              @indent -= 1
+              if node.children.empty?
+                print "{}"
+                return
+              end
+              newline!
+              node.children.each_slice(2) do |(key, value)|
+                emit(key)
+                print ":"
+                space!
+                if single_line(value)
+                  emit(value)
+                elsif has_bullet(value)
+                  emit(value)
+                else
+                  @indent += 1
+                  emit(value)
+                  @indent -= 1
+                end
+                newline!
+              end
             end
-            newline!
           end
         when Psych::Nodes::Sequence
-          if node.children.empty?
-            print "[]"
-            return
-          end
-          newline!
-          node.children.each do |subnode|
-            emit_lookahead_comments(subnode) unless flow?(node)
-            print "- "
-            @state = :pseudo_indent
-            @indent += 1
-            emit(subnode)
-            @indent -= 1
-            newline!
+          set_flow(flow?(node)) do
+            if @flow
+              print "["
+              cont = false
+              node.children.each do |subnode|
+                if cont
+                  print ","
+                  space!
+                end
+                emit(subnode)
+                cont = true
+              end
+              print "]"
+            else
+              if node.children.empty?
+                print "[]"
+                return
+              end
+              newline!
+              node.children.each do |subnode|
+                emit_lookahead_comments(subnode) unless @flow
+                print "- "
+                @state = :pseudo_indent
+                indented do
+                  emit(subnode)
+                end
+                newline!
+              end
+            end
           end
         when Psych::Nodes::Document
           emit(node.root)
@@ -177,12 +213,30 @@ module Psych
         end
       end
 
+      def indented(&block)
+        @indent += 1
+        begin
+          block.()
+        ensure
+          @indent -= 1
+        end
+      end
+
+      def set_flow(new_flow, &block)
+        old_flow, @flow = @flow, new_flow
+        begin
+          block.()
+        ensure
+          @flow = old_flow
+        end
+      end
+
       def flow?(node)
         case node
         when Psych::Nodes::Mapping
-          node.style == Psych::Nodes::Mapping::FLOW || node.children.empty?
+          @flow || node.style == Psych::Nodes::Mapping::FLOW || node.children.empty?
         when Psych::Nodes::Sequence
-          node.style == Psych::Nodes::Sequence::FLOW || node.children.empty?
+          @flow || node.style == Psych::Nodes::Sequence::FLOW || node.children.empty?
         end
       end
     end
