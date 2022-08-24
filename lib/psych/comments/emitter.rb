@@ -18,8 +18,12 @@ module Psych
 
       module_function def stringify_adjust_scalar(node, indent = 0)
         node2 = Psych::Nodes::Scalar.new(node.value, nil, nil, node.plain, node.quoted, node.style)
-        if node.tag && !node.quoted
-          node2.quoted = true
+        if node.tag
+          if node.style == Psych::Nodes::Scalar::PLAIN
+            node2.plain = true
+          else
+            node2.quoted = true
+          end
         end
 
         s = stringify_node(node2).sub(/\n\z/, "")
@@ -55,12 +59,17 @@ module Psych
         end
       end
     end
-    private_constant :NodeUtils
+    # private_constant :NodeUtils
 
     class Emitter
       include NodeUtils
 
       INDENT = "  "
+
+      DEFAULT_TAGMAP = {
+        '!' => '!',
+        '!!' => 'tag:yaml.org,2002:',
+      }.freeze
 
       attr_reader :out
 
@@ -70,6 +79,7 @@ module Psych
         @indent = 0
         @flow = false
         @comment_lookahead = []
+        @tagmap = DEFAULT_TAGMAP
       end
 
       def print(text)
@@ -106,6 +116,15 @@ module Psych
           print "&#{node.anchor}"
           space!
         end
+        if node.tag
+          handle, suffix = decompose_tag(node.tag)
+          if suffix
+            print "#{handle}#{suffix}"
+          else
+            print "!<#{node.tag}>"
+          end
+          space!
+        end
         case node
         when Psych::Nodes::Scalar, Psych::Nodes::Alias
           if node.is_a?(Psych::Nodes::Alias)
@@ -131,10 +150,6 @@ module Psych
               end
               print "}"
             else
-              if node.children.empty?
-                print "{}"
-                return
-              end
               newline!
               node.children.each_slice(2) do |(key, value)|
                 emit(key)
@@ -168,10 +183,6 @@ module Psych
               end
               print "]"
             else
-              if node.children.empty?
-                print "[]"
-                return
-              end
               newline!
               node.children.each do |subnode|
                 emit_lookahead_comments(subnode) unless @flow
@@ -185,15 +196,26 @@ module Psych
             end
           end
         when Psych::Nodes::Document
-          emit(node.root)
-        when Psych::Nodes::Stream
-          if node.children.size == 1 && node.children[0].implicit
-            emit(node.children[0])
-            return
+          node.tag_directives.each do |(handle, prefix)|
+            newline!
+            print "%TAG #{handle} #{prefix}"
+            newline!
           end
-          node.children.each do |subnode|
+          unless node.implicit
+            newline!
             print "---"
             newline!
+          end
+          set_tagmap(node) do
+            emit(node.root)
+          end
+          unless node.implicit_end
+            newline!
+            print "..."
+            newline!
+          end
+        when Psych::Nodes::Stream
+          node.children.each do |subnode|
             emit(subnode)
           end
         else
@@ -237,6 +259,33 @@ module Psych
           @flow || node.style == Psych::Nodes::Mapping::FLOW || node.children.empty?
         when Psych::Nodes::Sequence
           @flow || node.style == Psych::Nodes::Sequence::FLOW || node.children.empty?
+        end
+      end
+
+      # @param tag [String]
+      def decompose_tag(tag)
+        @tagmap.each do |handle, prefix|
+          if tag.start_with?(prefix)
+            suffix = tag.delete_prefix(prefix)
+            if /\A(?:%[0-9a-fA-F]{2}|[-0-9a-z#;\/?:@&=+$_.~*'()])*\z/.match?(suffix)
+              return [handle, suffix]
+            end
+          end
+        end
+        [nil, nil]
+      end
+
+      # @param node [Psych::Nodes::Document]
+      def set_tagmap(node, &block)
+        new_tagmap = DEFAULT_TAGMAP.dup
+        node.tag_directives.each do |(handle, prefix)|
+          new_tagmap[handle] = prefix
+        end
+        old_tagmap, @tagmap = @tagmap, new_tagmap
+        begin
+          block.()
+        ensure
+          @tagmap = old_tagmap
         end
       end
     end

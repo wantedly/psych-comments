@@ -1,0 +1,13 @@
+%TAG !e! tag:example.com,2000:app/
+---
+- !e!str foo
+- !<tag:example.com,2000:app/str> foo
+- !<tag:example.com,2000:app2/str> foo
+- !<tag:yaml.org,2002:str> foo
+...
+%TAG ! tag:example.com,2000:bang/
+%TAG !! tag:example.com,2000:bangbang/
+---
+- !<tag:example.com,2000:app/str> foo
+- !<tag:example.com,2000:app2/str> foo
+- !<tag:yaml.org,2002:str> foo

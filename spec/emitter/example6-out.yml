@@ -1,0 +1,5 @@
+- !ruby/object {}
+- !ruby/symbol "foo"
+- !!str foo
+- &x !!str foo
+- &y !!str foo
