@@ -1,6 +1,66 @@
 module Psych
   module Comments
+
+    module NodeUtils
+      module_function def stringify_node(node)
+        case node
+        when Psych::Nodes::Stream
+          node.to_yaml
+        when Psych::Nodes::Document
+          strm = Psych::Nodes::Stream.new
+          strm.children << node
+          stringify_node(strm)
+        else
+          doc = Psych::Nodes::Document.new([], [], true)
+          doc.children << node
+          stringify_node(doc)
+        end
+      end
+
+      module_function def stringify_adjust_scalar(node, indent = 0)
+        node2 = Psych::Nodes::Scalar.new(node.value, nil, nil, node.plain, node.quoted, node.style)
+        if node.tag && !node.quoted
+          node2.quoted = true
+        end
+
+        s = stringify_node(node2).sub(/\n\z/, "")
+        if node.style == Psych::Nodes::Scalar::DOUBLE_QUOTED || node.style == Psych::Nodes::Scalar::SINGLE_QUOTED || node.style == Psych::Nodes::Scalar::PLAIN
+          s = s.gsub(/\s*\n\s*/, " ")
+        else
+          s = s.gsub(/\n/, "\n#{INDENT * indent}")
+        end
+        s.gsub(/\n\s+$/, "\n")
+      end
+
+      module_function def single_line(node)
+        case node
+        when Psych::Nodes::Scalar, Psych::Nodes::Alias
+          node.leading_comments.empty? && node.trailing_comments.empty?
+        when Psych::Nodes::Mapping, Psych::Nodes::Sequence
+          node.children.empty?
+        else
+          false
+        end
+      end
+
+      module_function def has_bullet(node)
+        node.is_a?(Psych::Nodes::Sequence) && !node.children.empty?
+      end
+
+      module_function def has_anchor(node)
+        case node
+        when Psych::Nodes::Scalar, Psych::Nodes::Mapping, Psych::Nodes::Sequence
+          !!node.anchor
+        else
+          false
+        end
+      end
+    end
+    private_constant :NodeUtils
+
     class Emitter
+      include NodeUtils
+
       INDENT = "  "
 
       attr_reader :out
@@ -32,57 +92,14 @@ module Psych
         @state = :line_start
       end
 
-      def self.stringify_node(node, indent = 0)
-        node2 = Psych::Nodes::Scalar.new(node.value, nil, nil, node.plain, node.quoted, node.style)
-        if node.tag && !node.quoted
-          node2.quoted = true
-        end
-        doc = Psych::Nodes::Document.new([], [], true)
-        doc.children << node2
-        strm = Psych::Nodes::Stream.new
-        strm.children << doc
-
-        s = strm.to_yaml.sub(/\n\z/, "")
-        if node.style == Psych::Nodes::Scalar::DOUBLE_QUOTED || node.style == Psych::Nodes::Scalar::SINGLE_QUOTED || node.style == Psych::Nodes::Scalar::PLAIN
-          s = s.gsub(/\s*\n\s*/, " ")
-        else
-          s = s.gsub(/\n/, "\n#{INDENT * indent}")
-        end
-        s.gsub(/\n\s+$/, "\n")
-      end
-
-      def self.single_line(node)
-        case node
-        when Psych::Nodes::Scalar, Psych::Nodes::Alias
-          node.leading_comments.empty? && node.trailing_comments.empty?
-        when Psych::Nodes::Mapping, Psych::Nodes::Sequence
-          node.children.empty?
-        else
-          false
-        end
-      end
-
-      def self.has_bullet(node)
-        node.is_a?(Psych::Nodes::Sequence) && !node.children.empty?
-      end
-
-      def self.has_anchor(node)
-        case node
-        when Psych::Nodes::Scalar, Psych::Nodes::Mapping, Psych::Nodes::Sequence
-          !!node.anchor
-        else
-          false
-        end
-      end
-
-      def emit(node)
-        if node.leading_comments
+      def emit(node, skip_leading_comments: false)
+        if node.leading_comments && !skip_leading_comments
           node.leading_comments.each do |comment|
             print comment
             newline!
           end
         end
-        if Emitter.has_anchor(node)
+        if has_anchor(node)
           print "&#{node.anchor}"
           space!
         end
@@ -91,7 +108,7 @@ module Psych
           if node.is_a?(Psych::Nodes::Alias)
             print "*#{node.anchor}"
           else
-            print Emitter.stringify_node(node, @indent)
+            print stringify_adjust_scalar(node, @indent)
           end
         when Psych::Nodes::Mapping
           if node.children.empty?
@@ -103,9 +120,9 @@ module Psych
             emit(key)
             print ":"
             space!
-            if Emitter.single_line(value)
+            if single_line(value)
               emit(value)
-            elsif Emitter.has_bullet(value)
+            elsif has_bullet(value)
               emit(value)
             else
               @indent += 1
