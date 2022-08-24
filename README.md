@@ -1,43 +1,77 @@
-# Psych::Comments
+# `Psych::Comments` -- brings YAML comment handling
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/psych/comments`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+This gem allows you to manipulate YAML, preserving comment information.
 
 ## Installation
 
-Add this line to your application's Gemfile:
-
 ```ruby
+# Gemfile
 gem 'psych-comments'
 ```
 
-And then execute:
-
-    $ bundle install
-
-Or install it yourself as:
-
-    $ gem install psych-comments
-
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+require "psych"
+require "psych/comments"
 
-## Development
+ast = Psych::Comments.parse_stream(<<YAML)
+# foo
+- 42
+# bar
+- 12
+YAML
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+ast.children[0].root.children.sort_by! do |node|
+  node.value.to_i
+end
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+puts Psych::Comments.emit_yaml(ast)
+```
 
-## Contributing
+## API
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/qnighy/psych-comments. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/qnighy/psych-comments/blob/master/CODE_OF_CONDUCT.md).
+### `Psych::Nodes::Node#leading_comments` -> `Array<String>`
+
+Returns an array of leading comments. Each comment must start with `#`.
+
+Extends [Psych::Nodes::Node](https://docs.ruby-lang.org/en/3.1/Psych/Nodes/Node.html).
+
+### `Psych::Nodes::Node#trailing_comments` -> `Array<String>`
+
+Returns an array of leading comments. Each comment must start with `#`.
+
+Extends [Psych::Nodes::Node](https://docs.ruby-lang.org/en/3.1/Psych/Nodes/Node.html).
+
+### `Psych::Comments.parse(yaml, filename: nil)`
+
+Parse YAML data with comments. Returns [Psych::Nodes::Document](https://docs.ruby-lang.org/en/3.1/Psych/Nodes/Document.html).
+
+The interface is equivalent to [Psych.parse](https://docs.ruby-lang.org/en/3.1/Psych.html#method-c-parse).
+
+### `Psych::Comments.parse_file(filename)`
+
+Parse YAML data with comments. Returns [Psych::Nodes::Document](https://docs.ruby-lang.org/en/3.1/Psych/Nodes/Document.html).
+
+The interface is equivalent to [Psych.parse_file](https://docs.ruby-lang.org/en/3.1/Psych.html#method-c-parse).
+
+### `Psych::Comments.parse_stream(yaml, filename: nil, &block)`
+
+Parse YAML stream with comments. Returns [Psych::Nodes::Stream](https://docs.ruby-lang.org/en/3.1/Psych/Nodes/Stream.html).
+
+The interface is equivalent to [Psych.parse_stream](https://docs.ruby-lang.org/en/3.1/Psych.html#method-c-parse_stream).
+
+### `Psych::Comments.emit_yaml(node)` -> `String`
+
+Serializes the event tree into a string.
+
+This method is similar to [`Psych::Nodes::Node#to_yaml`](https://docs.ruby-lang.org/en/3.1/Psych/Nodes/Node.html#method-i-to_yaml),
+except that it takes comments into account.
+
+Note that, this is essentially a reimplemention of libyaml's emitter.
+The implementation is incomplete and you may observe an incorrect or inconsistent output
+if you supply an AST containing unusual constructs.
 
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
-
-## Code of Conduct
-
-Everyone interacting in the Psych::Comments project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/qnighy/psych-comments/blob/master/CODE_OF_CONDUCT.md).
