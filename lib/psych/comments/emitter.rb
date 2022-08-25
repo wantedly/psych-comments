@@ -223,9 +223,15 @@ module Psych
         else
           raise TypeError, node
         end
+        node.trailing_comments.each do |comment|
+          print comment
+          newline!
+        end
       end
 
       def emit_lookahead_comments(node)
+        return if node.equal?(@comment_lookahead[0])
+
         node.leading_comments.each do |comment|
           print comment
           newline!
