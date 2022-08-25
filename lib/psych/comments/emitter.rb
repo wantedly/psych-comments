@@ -16,7 +16,7 @@ module Psych
         end
       end
 
-      module_function def stringify_adjust_scalar(node, indent = 0)
+      module_function def stringify_adjust_scalar(node, indent_str = 0)
         node2 = Psych::Nodes::Scalar.new(node.value, nil, nil, node.plain, node.quoted, node.style)
         if node.tag
           if node.style == Psych::Nodes::Scalar::PLAIN
@@ -30,7 +30,7 @@ module Psych
         if node.style == Psych::Nodes::Scalar::DOUBLE_QUOTED || node.style == Psych::Nodes::Scalar::SINGLE_QUOTED || node.style == Psych::Nodes::Scalar::PLAIN
           s = s.gsub(/\s*\n\s*/, " ")
         else
-          s = s.gsub(/\n/, "\n#{INDENT * indent}")
+          s = s.gsub(/\n/, "\n#{indent_str}")
         end
         s.gsub(/\n\s+$/, "\n")
       end
@@ -130,7 +130,7 @@ module Psych
           if node.is_a?(Psych::Nodes::Alias)
             print "*#{node.anchor}"
           else
-            print stringify_adjust_scalar(node, @indent)
+            print stringify_adjust_scalar(node, INDENT * @indent)
           end
         when Psych::Nodes::Mapping
           set_flow(flow?(node)) do
@@ -155,14 +155,12 @@ module Psych
                 emit(key)
                 print ":"
                 space!
-                if single_line(value)
-                  emit(value)
-                elsif has_bullet(value)
+                if single_line?(value) || has_bullet(value)
                   emit(value)
                 else
-                  @indent += 1
-                  emit(value)
-                  @indent -= 1
+                  indented do
+                    emit(value)
+                  end
                 end
                 newline!
               end
@@ -188,8 +186,12 @@ module Psych
                 emit_lookahead_comments(subnode) unless @flow
                 print "- "
                 @state = :pseudo_indent
-                indented do
+                if single_line?(subnode)
                   emit(subnode)
+                else
+                  indented do
+                    emit(subnode)
+                  end
                 end
                 newline!
               end
@@ -204,7 +206,7 @@ module Psych
           unless node.implicit
             newline!
             print "---"
-            newline!
+            space!
           end
           set_tagmap(node) do
             emit(node.root)
@@ -212,8 +214,8 @@ module Psych
           unless node.implicit_end
             newline!
             print "..."
-            newline!
           end
+          newline!
         when Psych::Nodes::Stream
           node.children.each do |subnode|
             emit(subnode)
@@ -253,12 +255,20 @@ module Psych
         end
       end
 
+      def single_line?(node)
+        flow?(node) && node.leading_comments.empty? && node.trailing_comments.empty?
+      end
+
       def flow?(node)
         case node
+        when Psych::Nodes::Scalar, Psych::Nodes::Alias
+          true
         when Psych::Nodes::Mapping
           @flow || node.style == Psych::Nodes::Mapping::FLOW || node.children.empty?
         when Psych::Nodes::Sequence
           @flow || node.style == Psych::Nodes::Sequence::FLOW || node.children.empty?
+        else
+          false
         end
       end
 
