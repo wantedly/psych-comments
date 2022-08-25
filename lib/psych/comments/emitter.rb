@@ -108,8 +108,7 @@ module Psych
           @comment_lookahead.shift
         else
           node.leading_comments.each do |comment|
-            print comment
-            newline!
+            emit_comment(comment)
           end
         end
         if has_anchor(node)
@@ -224,8 +223,7 @@ module Psych
           raise TypeError, node
         end
         node.trailing_comments.each do |comment|
-          print comment
-          newline!
+          emit_comment(comment)
         end
       end
 
@@ -233,14 +231,21 @@ module Psych
         return if node.equal?(@comment_lookahead[0])
 
         node.leading_comments.each do |comment|
-          print comment
-          newline!
+          emit_comment(comment)
         end
         @comment_lookahead.push(node)
         case node
         when Psych::Nodes::Mapping, Psych::Nodes::Sequence
           emit_lookahead_comments(node.children[0]) unless flow?(node)
         end
+      end
+
+      def emit_comment(comment)
+        unless /\A#[^\r\n]*\z/.match?(comment)
+          raise ArgumentError, "Invalid comment: #{comment.inspect}"
+        end
+        print comment
+        newline!
       end
 
       def indented(&block)
