@@ -1,9 +1,13 @@
 # foo
 - foo # foo2
+- # foo
+  foo
 - foo: bar
 - foo: bar
   bar: baz
 - - 1
   - 2
+#foo3
+- foo: bar
 - #foo3
   foo: bar

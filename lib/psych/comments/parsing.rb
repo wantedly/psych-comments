@@ -4,6 +4,7 @@ module Psych
       def initialize(text)
         @lines = text.lines.to_a
         @last = [0, 0]
+        @bullet_owner = nil
       end
 
       def sublines(sl, sc, el, ec)
@@ -25,7 +26,20 @@ module Psych
       def read_comments(line, column)
         s = sublines(*@last, line, column)
         @last = [line, column]
-        s.scan(/#.*?$/)
+        comments = []
+        s.scan(/-|#.*?$/) do |token|
+          case token
+          when "-"
+            if @bullet_owner
+              @bullet_owner.leading_comments.push(*comments)
+              comments = []
+            end
+          else
+            comments << token
+          end
+        end
+        @bullet_owner = nil
+        comments
       end
 
       def visit(node)
@@ -35,8 +49,11 @@ module Psych
           @last = [node.end_line, node.end_column]
         when Psych::Nodes::Sequence, Psych::Nodes::Mapping
           has_delim = /[\[{]/.match?(char_at(node.start_line, node.start_column))
+          has_bullet = node.is_a?(Psych::Nodes::Sequence) && !has_delim
+          # Special-case on `- #foo\n  bar: baz`
           node.leading_comments.push(*read_comments(node.start_line, node.start_column)) if has_delim
           node.children.each do |subnode|
+            @bullet_owner = subnode if has_bullet
             visit(subnode)
           end
           if has_delim

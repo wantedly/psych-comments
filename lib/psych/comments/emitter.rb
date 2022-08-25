@@ -234,10 +234,6 @@ module Psych
           emit_comment(comment)
         end
         @comment_lookahead.push(node)
-        case node
-        when Psych::Nodes::Mapping, Psych::Nodes::Sequence
-          emit_lookahead_comments(node.children[0]) unless flow?(node)
-        end
       end
 
       def emit_comment(comment)

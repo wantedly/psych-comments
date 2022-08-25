@@ -1,7 +1,9 @@
 - foo
+- foo
 - foo: bar
 - foo: bar
   bar: baz
 - - 1
   - 2
+- foo: bar
 - foo: bar

@@ -62,10 +62,14 @@ RSpec.describe "Parsing" do
         - foo1
         - # bar
           bar2
+        # baz-a
+        - # baz-b
+          foo3: bar3
       YAML
       expect(ast.root).to be_a(Psych::Nodes::Sequence)
       expect(ast.root.children[0].leading_comments).to eq(["# foo"])
       expect(ast.root.children[1].leading_comments).to eq(["# bar"])
+      expect(ast.root.children[2].leading_comments).to eq(["# baz-a"])
     end
 
     it "attaches comments to flow mapping" do
