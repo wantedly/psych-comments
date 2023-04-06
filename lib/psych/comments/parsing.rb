@@ -46,6 +46,8 @@ module Psych
         case node
         when Psych::Nodes::Scalar, Psych::Nodes::Alias
           node.leading_comments.push(*read_comments(node.start_line, node.start_column))
+          rest_of_line = sublines(node.end_line, node.end_column, node.end_line, -1)
+          node.line_end_comment = rest_of_line if rest_of_line =~ /^\s+#/
           @last = [node.end_line, node.end_column]
         when Psych::Nodes::Sequence, Psych::Nodes::Mapping
           has_delim = /[\[{]/.match?(char_at(node.start_line, node.start_column))
@@ -57,6 +59,12 @@ module Psych
             visit(subnode)
           end
           if has_delim
+            rest_of_line = sublines(node.end_line, node.end_column, node.end_line, -1)
+            if rest_of_line && rest_of_line =~ /^\s+#/
+              node.line_end_comment = rest_of_line
+              @last = [node.end_line, node.end_column]
+            end
+
             target = node.children[-1] || node
             target.trailing_comments.push(*read_comments(node.end_line, node.end_column))
           end

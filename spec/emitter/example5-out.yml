@@ -3,8 +3,7 @@ foo:
   bar: baz
   bar2:
     # test
-    foo: foo
-    #testtest
+    foo: foo #testtest
     # test
     bar: bar
   bar3:

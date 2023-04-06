@@ -59,7 +59,7 @@ RSpec.describe "Parsing" do
     it "attaches comments to sequence elements" do
       ast = Psych::Comments.parse(<<~YAML)
         # foo
-        - foo1
+        - foo1 # end1
         - # bar
           bar2
         # baz-a
@@ -68,6 +68,7 @@ RSpec.describe "Parsing" do
       YAML
       expect(ast.root).to be_a(Psych::Nodes::Sequence)
       expect(ast.root.children[0].leading_comments).to eq(["# foo"])
+      expect(ast.root.children[0].line_end_comment).to eq(" # end1")
       expect(ast.root.children[1].leading_comments).to eq(["# bar"])
       expect(ast.root.children[2].leading_comments).to eq(["# baz-a"])
     end
