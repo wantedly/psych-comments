@@ -68,7 +68,7 @@ RSpec.describe "Parsing" do
       YAML
       expect(ast.root).to be_a(Psych::Nodes::Sequence)
       expect(ast.root.children[0].leading_comments).to eq(["# foo"])
-      expect(ast.root.children[0].line_end_comment).to eq(" # end1")
+      expect(ast.root.children[0].line_end_comments).to eq([" # end1"])
       expect(ast.root.children[1].leading_comments).to eq(["# bar"])
       expect(ast.root.children[2].leading_comments).to eq(["# baz-a"])
     end
