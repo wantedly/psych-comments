@@ -131,7 +131,10 @@ module Psych
           else
             print stringify_adjust_scalar(node, INDENT * @indent)
           end
-          node.line_end_comments.each(&method(:emit_comment))
+          node.line_end_comments.each do |comment|
+            print " "
+            emit_comment(comment)
+          end
         when Psych::Nodes::Mapping
           set_flow(flow?(node)) do
             if @flow
@@ -149,7 +152,10 @@ module Psych
                 cont = true
               end
               print "}"
-              node.line_end_comments.each(&method(:emit_comment))
+              node.line_end_comments.each do |comment|
+                print " "
+                emit_comment(comment)
+              end
             else
               newline!
               node.children.each_slice(2) do |(key, value)|
@@ -181,7 +187,10 @@ module Psych
                 cont = true
               end
               print "]"
-              node.line_end_comments.each(&method(:emit_comment))
+              node.line_end_comments.each do |comment|
+                print " "
+                emit_comment(comment)
+              end
             else
               newline!
               node.children.each do |subnode|
@@ -240,7 +249,7 @@ module Psych
       end
 
       def emit_comment(comment)
-        unless /\A\s*#[^\r\n]*\z/.match?(comment)
+        unless /\A#[^\r\n]*\z/.match?(comment)
           raise ArgumentError, "Invalid comment: #{comment.inspect}"
         end
         print comment
