@@ -131,6 +131,10 @@ module Psych
           else
             print stringify_adjust_scalar(node, INDENT * @indent)
           end
+          node.line_end_comments.each do |comment|
+            print " "
+            emit_comment(comment)
+          end
         when Psych::Nodes::Mapping
           set_flow(flow?(node)) do
             if @flow
@@ -148,6 +152,10 @@ module Psych
                 cont = true
               end
               print "}"
+              node.line_end_comments.each do |comment|
+                print " "
+                emit_comment(comment)
+              end
             else
               newline!
               node.children.each_slice(2) do |(key, value)|
@@ -179,6 +187,10 @@ module Psych
                 cont = true
               end
               print "]"
+              node.line_end_comments.each do |comment|
+                print " "
+                emit_comment(comment)
+              end
             else
               newline!
               node.children.each do |subnode|

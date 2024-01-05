@@ -1,4 +1,4 @@
-- []
-- [1, 2]
-- {}
-- {foo: bar}
+- [] # line 1
+- [1, 2] # line 2
+- {} # line 3
+- {foo: bar} # line 4
