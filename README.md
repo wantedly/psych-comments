@@ -37,6 +37,24 @@ Returns an array of leading comments. Each comment must start with `#`.
 
 Extends [Psych::Nodes::Node](https://docs.ruby-lang.org/en/3.1/Psych/Nodes/Node.html).
 
+### `Psych::Nodes::Mapping#inline_leading_comment` -> `String | nil`
+
+Returns the inline comment immediately following the `{` character. Each comment must start with `#`.
+
+Extends [Psych::Nodes::Mapping](https://docs.ruby-lang.org/en/3.1/Psych/Nodes/Mapping.html).
+
+### `Psych::Nodes::Sequence#inline_leading_comment` -> `String | nil`
+
+Returns the inline comment immediately following the `[` character. Each comment must start with `#`.
+
+Extends [Psych::Nodes::Sequence](https://docs.ruby-lang.org/en/3.1/Psych/Nodes/Sequence.html).
+
+### `Psych::Nodes::Node#inline_comment` -> `String | nil`
+
+Returns the inline comment. Each comment must start with `#`.
+
+Extends [Psych::Nodes::Node](https://docs.ruby-lang.org/en/3.1/Psych/Nodes/Node.html).
+
 ### `Psych::Nodes::Node#trailing_comments` -> `Array<String>`
 
 Returns an array of leading comments. Each comment must start with `#`.

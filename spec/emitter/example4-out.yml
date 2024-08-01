@@ -1,4 +1,12 @@
-- []
-- [1, 2]
-- {}
-- {foo: bar}
+- [] # empty array
+- [1, 2] # array of integers
+- {} # empty map
+- {foo: bar} # map with one key-value pair
+- [ # leading comment for empty array
+]
+- [ # leading comment for array of integers
+  1, 2]
+- { # leading comment for empty map
+}
+- { # leading comment for map with one key-value pair
+  foo: bar}

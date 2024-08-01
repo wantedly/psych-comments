@@ -1,11 +1,13 @@
 # foo
-- foo
-# foo2
+- foo # foo2
 # foo
 - foo
 - foo: bar
 - foo: bar
   bar: baz
+- list: # bar
+  - 1
+  - 2
 - - 1
   - 2
 #foo3

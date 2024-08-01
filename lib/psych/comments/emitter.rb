@@ -103,7 +103,7 @@ module Psych
         @state = :line_start
       end
 
-      def emit(node)
+      def emit(node, skip_comment: false)
         if node.equal?(@comment_lookahead[0])
           @comment_lookahead.shift
         else
@@ -131,29 +131,48 @@ module Psych
           else
             print stringify_adjust_scalar(node, INDENT * @indent)
           end
+
+          # special case for inline key comment
+          emit_comment(node.inline_comment, space: true) if node.inline_comment && !skip_comment
         when Psych::Nodes::Mapping
           set_flow(flow?(node)) do
             if @flow
               print "{"
+              if node.inline_leading_comment
+                emit_comment(node.inline_leading_comment, space: true)
+                @indent += 1 # newline, indent rest of flow-block
+              end
               cont = false
               node.children.each_slice(2) do |(key, value)|
                 if cont
                   print ","
                   space!
                 end
-                emit(key)
+                emit(key, skip_comment: true)
                 print ":"
+                emit_comment(key.inline_comment, space: true) if key.inline_comment # special case for inline key comment
                 space!
                 emit(value)
                 cont = true
               end
+              if node.inline_leading_comment
+                @indent -= 1
+              end
               print "}"
+              emit_comment(node.inline_comment, space: true) if node.inline_comment
             else
               newline!
               node.children.each_slice(2) do |(key, value)|
-                emit(key)
+                emit(key, skip_comment: true)
                 print ":"
-                space!
+
+                # special case for inline key comment
+                if key.inline_comment
+                  emit_comment(key.inline_comment, space: true)
+                else
+                  space!
+                end
+
                 if single_line?(value) || has_bullet(value)
                   emit(value)
                 else
@@ -161,6 +180,8 @@ module Psych
                     emit(value)
                   end
                 end
+
+                emit_comment(node.inline_comment, newline: false) if node.inline_comment
                 newline!
               end
             end
@@ -169,16 +190,24 @@ module Psych
           set_flow(flow?(node)) do
             if @flow
               print "["
+              emit_comment(node.inline_leading_comment, space: true) if node.inline_leading_comment
               cont = false
               node.children.each do |subnode|
                 if cont
                   print ","
                   space!
                 end
-                emit(subnode)
+                if node.inline_leading_comment
+                  indented do
+                    emit(subnode)
+                  end
+                else
+                  emit(subnode)
+                end
                 cont = true
               end
               print "]"
+              emit_comment(node.inline_comment, space: true) if node.inline_comment
             else
               newline!
               node.children.each do |subnode|
@@ -192,6 +221,7 @@ module Psych
                     emit(subnode)
                   end
                 end
+                emit_comment(node.inline_comment, newline: false) if node.inline_comment
                 newline!
               end
             end
@@ -236,12 +266,13 @@ module Psych
         @comment_lookahead.push(node)
       end
 
-      def emit_comment(comment)
+      def emit_comment(comment, newline: true, space: false)
         unless /\A#[^\r\n]*\z/.match?(comment)
           raise ArgumentError, "Invalid comment: #{comment.inspect}"
         end
+        space! if space
         print comment
-        newline!
+        newline! if newline
       end
 
       def indented(&block)
@@ -263,7 +294,10 @@ module Psych
       end
 
       def single_line?(node)
-        flow?(node) && node.leading_comments.empty? && node.trailing_comments.empty?
+        flow?(node) &&
+          node.leading_comments.empty? &&
+          node.trailing_comments.empty? &&
+          !has_child_inline_comments?(node)
       end
 
       def flow?(node)
@@ -277,6 +311,14 @@ module Psych
         else
           false
         end
+      end
+
+      def has_child_inline_comments?(node)
+        node.children&.any? do |child|
+          child.inline_comment ||
+            (child.respond_to?(:inline_leading_comment) && child.inline_leading_comment) ||
+            has_child_inline_comments?(child)
+        end || false
       end
 
       # @param tag [String]

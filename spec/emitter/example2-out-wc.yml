@@ -3,6 +3,9 @@
 - foo: bar
 - foo: bar
   bar: baz
+- list:
+  - 1
+  - 2
 - - 1
   - 2
 - foo: bar
