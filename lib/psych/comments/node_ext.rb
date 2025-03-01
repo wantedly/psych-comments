@@ -8,4 +8,12 @@ class Psych::Nodes::Node
   def trailing_comments
     @trailing_comments ||= []
   end
+
+  def leading_comments=(comments)
+    @leading_comments = Array(comments)
+  end
+
+  def trailing_comments=(comments)
+    @trailing_comments = Array(comments)
+  end
 end
