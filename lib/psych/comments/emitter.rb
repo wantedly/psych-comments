@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Psych
   module Comments
     module NodeUtils
@@ -64,7 +66,8 @@ module Psych
     class Emitter
       include NodeUtils
 
-      INDENT = "  "
+      INDENT = "  ".freeze
+      SPACE = " ".freeze
 
       DEFAULT_TAGMAP = {
         '!' => '!',
@@ -74,7 +77,7 @@ module Psych
       attr_reader :out
 
       def initialize
-        @out = ""
+        @out = String.new
         @state = :init
         @indent = 0
         @flow = false
@@ -85,7 +88,7 @@ module Psych
       def print(text)
         case @state
         when :word_end
-          @out << " "
+          @out << SPACE
         when :line_start
           @out << INDENT * @indent
         end
